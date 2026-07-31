@@ -32,7 +32,7 @@ export class HomePage{
     }
 
     async expectWeAreOnCorrectPage(heading: string, url: string, title: string){
-        await expect( this.page.getByRole('heading', {name: heading, level: 1})).toBeVisible();
+        await expect( this.page.getByRole('heading', {name: heading, exact: true})).toBeVisible();
         await expect( this.page ).toHaveURL(`${BASE_URL}${url}`);
         await expect( this.page ).toHaveTitle(title);
     } 
