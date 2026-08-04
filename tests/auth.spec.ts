@@ -1,5 +1,6 @@
 import {test, expect, type Page} from '@playwright/test';
 import {LoginPage} from '../pages/LoginPage';
+import {BasePage} from '../pages/BasePage';
 import { loginAs, logout } from '../helpers/auth';
 
 
@@ -35,20 +36,22 @@ const SELECTORS = {
 test.describe('Positive Scenarios', () => {
 
     let loginPage: LoginPage;
+    let basePage: BasePage;
 
     test.beforeEach(async({page})=>{
         loginPage = new LoginPage(page);
+        basePage = new BasePage(page);
         await loginPage.open();
     });
  
 
     test('P-01| Login page loads correctly' , async({page})=>{
         
-        await loginPage.expectWeAreOnCorrectPage('/login', 'Welcome, Please Sign In!');
+        await basePage.expectWeAreOnCorrectPage('Welcome, Please Sign In!', '/login', 'Demo Web Shop. Login');
     });
 
 
-    test('P02 | Login form contains all required fields', async({page})=> {
+    test('P-02 | Login form contains all required fields', async({page})=> {
         
         await expect(page.locator(SELECTORS.emailInput), 'Email field should be displayed').toBeVisible();
         await expect(page.locator(SELECTORS.passwordInput), 'Password field should be displayed').toBeVisible();
@@ -60,38 +63,38 @@ test.describe('Positive Scenarios', () => {
     });
 
 
-    test('P03 | Login form contains "Remember me" checkbox', async({page})=> {
+    test('P-03 | Login form contains "Remember me" checkbox', async({page})=> {
         
         await expect(page.locator(SELECTORS.rememberMeCheck)).toBeVisible();
         await expect(page.locator(SELECTORS.rememberMeCheck)).toBeEnabled();
     });
 
 
-    test('P04 | "Forgot Password" link redirects to "Password recovery" page', async({page}) => {
+    test('P-04 | "Forgot Password" link redirects to "Password recovery" page', async({page}) => {
         
         await test.step('Click on Forgot password link', async() => {
             await page.getByRole('link',{ name : 'Forgot password?'}).click(); 
         });
 
         await test.step('User is redirected to "Password recovery" page', async() => {  
-            await loginPage.expectWeAreOnCorrectPage('/passwordrecovery', 'Password recovery');
+            await basePage.expectWeAreOnCorrectPage('Password recovery', '/passwordrecovery', 'Demo Web Shop. Password Recovery');
         });
     });
 
 
-    test('P05 | "Register" link redirects to registration page', async({page})=> {
+    test('P-05 | "Register" link redirects to registration page', async({page})=> {
         
         await test.step('Click on Register link', async()=> {  
             await page.locator(SELECTORS.registerButton).click();
         });
 
         await test.step('User is redirected to "Register" page', async() => {  
-            await loginPage.expectWeAreOnCorrectPage('/register', 'Register');
+            await basePage.expectWeAreOnCorrectPage('Password recovery', '/passwordrecovery', 'Demo Web Shop. Password Recovery');
         });
     });
 
 
-    test('P06 | Login with valid credentials', async({page}) => {
+    test('P-06 | Login with valid credentials', async({page}) => {
         
         await test.step('Fill valid credentials and login', async()=>{
             await loginAs(page, VALID_USER.email, VALID_USER.password);
@@ -103,7 +106,7 @@ test.describe('Positive Scenarios', () => {
     });
 
 
-    test('P07 | Log out', async({page}) => {
+    test('P-07 | Log out', async({page}) => {
         
         await test.step('Fill valid credentials and login', async() => {
             await loginAs(page, VALID_USER.email, VALID_USER.password);
@@ -120,7 +123,7 @@ test.describe('Positive Scenarios', () => {
     });
 
 
-    test('P08 | Second login is succesful', async({page}) => {
+    test('P-08 | Second login is succesful', async({page}) => {
         
         await test.step('Login with valid credentials', async() => {
             await loginAs(page, VALID_USER.email, VALID_USER.password);
@@ -181,20 +184,22 @@ test.describe('Positive Scenarios', () => {
 
 test.describe('Negative Scenarios', () => {
     
-    test.beforeEach(async({ page }) => {
-        await page.goto(LOGIN_URL);
+    let loginPage: LoginPage;
+    
+    test.beforeEach(async({page})=>{
+        loginPage = new LoginPage(page);
+        await loginPage.open();
     });
 
 
     test('N-01 | Sending Empty form - should show validation error', async({page}) => {
     
         await test.step('Click to "Log In" without required fields', async() => {
-            await page.locator(SELECTORS.loginButton).click();
+            await loginAs(page, '', '');
         });
     
         await test.step('Expect WE stay on /login, and display error message', async()=>{
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError)).toContainText('Login was unsuccessful. Please correct the errors and try again.');
+            await loginPage.expectInvalidLogin('No customer account found');
         });
     });
     
@@ -205,8 +210,7 @@ test.describe('Negative Scenarios', () => {
         });
     
         await test.step('Expect URL and ERROR text', async()=>{
-            await expect(page, 'Incorrect URL').toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError), 'Error message is not visible').toContainText('The credentials provided are incorrect');
+            await loginPage.expectInvalidLogin('The credentials provided are incorrect');
         });
     });
     
@@ -217,8 +221,7 @@ test.describe('Negative Scenarios', () => {
         });
 
         await test.step('Expect URL and ERROR text', async() => {
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError), 'Email field needs to be filled in').toContainText('Login was unsuccessful. Please correct the errors and try again.');
+            await loginPage.expectInvalidLogin('No customer account found');
         });
     });
     
@@ -228,8 +231,7 @@ test.describe('Negative Scenarios', () => {
         });
 
         await test.step('Expect URL and ERROR text',async() => {
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError), 'Both email and password are incorrect').toContainText('Login was unsuccessful. Please correct the errors and try again.')
+            await loginPage.expectInvalidLogin('No customer account found');
         });
     });
     
@@ -239,8 +241,7 @@ test.describe('Negative Scenarios', () => {
         });
 
         await test.step('Expect URL and ERROR text', async() => {
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError), 'Password is incorrect').toContainText('The credentials provided are incorrect.');
+            await loginPage.expectInvalidLogin('The credentials provided are incorrect');
         });
     });
     
@@ -250,8 +251,7 @@ test.describe('Negative Scenarios', () => {
         });
 
         await test.step('Expect URL and ERROR text', async() => {
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError), 'Email is invalid').toContainText('No customer account found');
+            await loginPage.expectInvalidLogin('No customer account found');
         });
     });
     
@@ -263,8 +263,7 @@ test.describe('Negative Scenarios', () => {
         });
     
         await test.step('Expect on login /login', async()=>{
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.emailValidationError)).toContainText('Please enter a valid email address.');
+            await loginPage.expectInvalidEmail();
         });
     
     });
@@ -276,8 +275,7 @@ test.describe('Negative Scenarios', () => {
         });
         
         await test.step('Expect on login /login', async()=>{
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.emailValidationError)).toContainText('Please enter a valid email address.');
+            await loginPage.expectInvalidEmail();
         });
     });
     
@@ -288,8 +286,7 @@ test.describe('Negative Scenarios', () => {
         });
     
         await test.step('Expect URL and ERROR Message', async()=>{
-            await expect(page).toHaveURL(LOGIN_URL);
-            await expect(page.locator(SELECTORS.validationError)).toContainText('The credentials provided are incorrect');
+            await loginPage.expectInvalidLogin('The credentials provided are incorrect');
         });
     });
     
@@ -302,9 +299,7 @@ test.describe('Negative Scenarios', () => {
         });
     
         await test.step('Expect URL, email and logout links', async()=>{
-            await expect(page).toHaveURL(BASE_URL);
-            await expect(page.locator(SELECTORS.header)).toContainText(VALID_USER.email);
-            await expect(page.locator(SELECTORS.header)).toContainText('Log out');
+            await loginPage.expectLoginIsSuccessful();
         });
     });
     

@@ -1,63 +1,62 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, Locator } from "@playwright/test";
 
 
 const BASE_URL = 'https://demowebshop.tricentis.com';
 const LOGIN_URL = `${BASE_URL}/login`;
-const ACCOUNT_PAGE = `${BASE_URL}/customer/info`
+
+
+const SELECTORS = {                      
+   
+    validationError: '.validation-summary-errors',
+    emailValidationError: '.field-validation-error'
+};
 
 const VALID_USER = {
     email: 'zaraantonyan@yahoo.com',
     password: 'demowebshop'
-}
-
-
-const VALID_USER2 = {
-    email: 'ZARAANTONYAN@YAHOO.COM',
-    password: 'demowebshop'
-}
-
-const SELECTORS = {
-
-    emailInput: '#Email',
-    passwordInput: '#Password',
-    loginButton: 'input.login-button',
-    heading: '.page-title h1',
-    rememberMeCheck: '#RememberMe',
-    registerButton: 'input.register-button',                      
-    header: '.header',
-    logoutLink: '.ico-logout',
-    validationError: '.validation-summary-errors',
-    emailValidationError: '.field-validation-error'
 };
 
 
 export class LoginPage{
 
     private page: Page;
+    private locator_header: Locator;
+    private locator_logoutLink: Locator;
+    private locator_validationError: Locator;
+    private locator_emailValidationError: Locator;
+
 
     constructor(page: Page){
         this.page = page;
+        this.locator_header = page.locator('.header');
+        this.locator_logoutLink = page.locator('.ico-logout');
+        this.locator_validationError = page.locator('.validation-summary-errors',);
+        this.locator_emailValidationError = page.locator('.field-validation-error');
     }
 
     async open(){
         await this.page.goto(LOGIN_URL);
     }
 
-
-    async expectWeAreOnCorrectPage(url: string, heading: string){
-        await expect(this.page).toHaveURL(`${BASE_URL}${url}`);
-        await expect(this.page.locator(SELECTORS.heading)).toHaveText(heading);
-    }
-
     async expectLoginIsSuccessful(){
         await expect(this.page).toHaveURL(BASE_URL);
-        await expect( this.page.locator(SELECTORS.header)).toContainText('zaraantonyan@yahoo.com');
-        await expect( this.page.locator(SELECTORS.header)).toContainText('Log out');
+        await expect( this.locator_header).toContainText(VALID_USER.email);
+        await expect( this.locator_header).toContainText('Log out');
     }
 
     async expectLogout(){
         await expect (this.page).toHaveURL(BASE_URL);
-        await expect(this.page.locator(SELECTORS.logoutLink)).toHaveCount(0);
+        await expect(this.locator_logoutLink).toHaveCount(0);
+    }
+
+    async expectInvalidLogin(errorMessage: string){
+        await expect (this.page, 'Incorrect URL').toHaveURL(LOGIN_URL);
+        await expect (this.locator_validationError).toContainText(errorMessage);
+    }
+
+    async expectInvalidEmail(){
+        await expect(this.page).toHaveURL(LOGIN_URL);
+        await expect(this.locator_emailValidationError).toContainText('Please enter a valid email address.');
     }
 
 }
